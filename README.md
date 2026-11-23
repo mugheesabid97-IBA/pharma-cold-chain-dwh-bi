@@ -55,6 +55,7 @@ cd pharma-cold-chain-dwh-bi
 cp .env.example .env              # Windows PowerShell: Copy-Item .env.example .env
 # put the 7 CSVs into data/raw/
 docker compose up -d --build      # first build downloads ~600 MB of images
+#   slow/unstable internet? put pre-downloaded Linux wheels in docker/wheels/ and the build installs offline
 docker compose ps                 # wait until all 5 services are "healthy" (~2 min)
 ```
 
@@ -79,7 +80,13 @@ docker compose exec airflow airflow dags trigger sdi_phase1_pipeline
 
 # 5) Documents built from the run
 docker compose exec airflow python scripts/build_oversampling_report.py   # docs/Oversampling_Report.pdf
+
+# Helpers (run on the host with the dev venv)
+python scripts/wait_for_run.py sdi_phase1_pipeline      # follow the latest run task by task
+python scripts/check_grafana_panels.py                  # every dashboard panel returns data?
 ```
+
+Results of the full demo sequence: [docs/run_evidence.md](docs/run_evidence.md) and [docs/VERIFICATION.md](docs/VERIFICATION.md).
 
 You can also trigger both DAGs from the Airflow UI (▶ *Trigger DAG w/ config*). `data_generator_dag` takes the
 parameters `refresh_no`, `target_month` (YYYY-MM), `sources` (any of `01`…`07`), `sales_rows` and `stream_rows`.
