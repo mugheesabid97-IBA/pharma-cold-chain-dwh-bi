@@ -1,0 +1,445 @@
+{
+  "uid": "sdi-query-performance",
+  "title": "04 Query Performance",
+  "description": "Analytical query layer: timings before vs after optimisation",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": [
+    "sdi",
+    "phase1",
+    "monitoring"
+  ],
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "15s",
+      "30s",
+      "1m"
+    ]
+  },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Daily active query count (today)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM monitoring.query_log WHERE start_ts >= date_trunc('day', now())"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Query error rate %",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT round(100.0 * count(*) FILTER (WHERE status = 'error') / nullif(count(*), 0), 2) FROM monitoring.query_log"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "orange",
+                "value": 1
+              },
+              {
+                "color": "red",
+                "value": 5
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "background",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Avg speed-up (raw / summary)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT round(avg(b.ms / nullif(a.ms, 0))::numeric, 1) FROM (SELECT query_name, avg(duration_ms) ms FROM monitoring.query_log WHERE variant = 'before' AND status = 'success' GROUP BY 1) b JOIN (SELECT query_name, avg(duration_ms) ms FROM monitoring.query_log WHERE variant = 'after' AND status = 'success' GROUP BY 1) a USING (query_name)"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "x"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Total query executions",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT count(*) FROM monitoring.query_log"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 5,
+      "type": "barchart",
+      "title": "Average execution time per widget: before vs after optimisation (ms)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT widget, round(avg(duration_ms) FILTER (WHERE variant = 'before'), 2) AS \"before (raw star join)\", round(avg(duration_ms) FILTER (WHERE variant = 'after'), 2) AS \"after (summary table)\" FROM monitoring.query_log WHERE status = 'success' GROUP BY widget ORDER BY widget"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms"
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "vertical",
+        "stacking": "none",
+        "showValue": "auto",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelMaxLength": 40,
+        "xField": "widget"
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Daily query count",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT date_trunc('day', start_ts) AS time, count(*) AS queries FROM monitoring.query_log WHERE $__timeFilter(start_ts) GROUP BY 1 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 70
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Query duration per run (median ms)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 16
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT min(start_ts) AS time, variant AS metric, percentile_cont(0.5) WITHIN GROUP (ORDER BY duration_ms) AS value FROM monitoring.query_log WHERE $__timeFilter(start_ts) GROUP BY run_id, variant ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "ms",
+          "custom": {
+            "drawStyle": "line",
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 8,
+      "type": "table",
+      "title": "Before vs after per query",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 24,
+        "x": 0,
+        "y": 24
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT query_name, widget, round(avg(duration_ms) FILTER (WHERE variant = 'before'), 2) AS before_ms, round(avg(duration_ms) FILTER (WHERE variant = 'after'), 2) AS after_ms, round((avg(duration_ms) FILTER (WHERE variant = 'before') / nullif(avg(duration_ms) FILTER (WHERE variant = 'after'), 0))::numeric, 1) AS speedup_x, count(*) AS executions, count(*) FILTER (WHERE status = 'error') AS errors FROM monitoring.query_log GROUP BY 1, 2 ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "title": "Other dashboards",
+      "type": "dashboards",
+      "tags": [
+        "sdi"
+      ],
+      "asDropdown": true
+    }
+  ]
+}

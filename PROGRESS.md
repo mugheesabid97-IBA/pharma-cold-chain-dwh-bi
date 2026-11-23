@@ -26,4 +26,9 @@ Disk: 3.5 GB to 5.9 GB (pip cache purged) to 7.8 GB (VMware Workstation uninstal
 - Profile: `docs/data_profile.md` (script `scripts/profile_data.py`).
 - Facts: 2023-01..2025-12 (36 mo); sales 500k (~13.9k/mo); hospital 756 rows/mo; only 3 cold-chain meds; channels come from SalesChannel + PharmacyType. Refresh1 = 2026-01, Refresh2 = 2026-02.
 
-## Steps 3–17: not started (code can be written before Docker is ready)
+## Step 3: GitHub (DONE)
+- gh is logged in as mugheesabid97-IBA; irtazaazeem123 is logged out of gh.
+- Local git identity: mugheesabid97-IBA / 328668477+mugheesabid97-IBA@users.noreply.github.com
+- Repo created **PUBLIC** (the user asked for this instead of private): https://github.com/mugheesabid97-IBA/pharma-cold-chain-dwh-bi. Initial commit pushed.
+
+## Steps 4–17: not started (code can be written before Docker is ready)

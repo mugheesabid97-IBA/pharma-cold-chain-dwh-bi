@@ -1,0 +1,19 @@
+#!/bin/bash
+# Runs once, on the first start of the postgres container (docker-entrypoint-initdb.d).
+# Creates: the Airflow metadata database, the staging/monitoring schemas in pharma_dwh,
+# and a read-only user for Grafana.
+set -euo pipefail
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+    CREATE ROLE ${AIRFLOW_DB_USER} LOGIN PASSWORD '${AIRFLOW_DB_PASSWORD}';
+    CREATE DATABASE ${AIRFLOW_DB_NAME} OWNER ${AIRFLOW_DB_USER};
+
+    CREATE SCHEMA IF NOT EXISTS staging AUTHORIZATION ${POSTGRES_USER};
+    CREATE SCHEMA IF NOT EXISTS monitoring AUTHORIZATION ${POSTGRES_USER};
+
+    CREATE ROLE ${GRAFANA_DB_USER} LOGIN PASSWORD '${GRAFANA_DB_PASSWORD}';
+    GRANT CONNECT ON DATABASE ${POSTGRES_DB} TO ${GRAFANA_DB_USER};
+    GRANT USAGE ON SCHEMA monitoring, staging TO ${GRAFANA_DB_USER};
+    ALTER DEFAULT PRIVILEGES FOR ROLE ${POSTGRES_USER} IN SCHEMA monitoring GRANT SELECT ON TABLES TO ${GRAFANA_DB_USER};
+    ALTER DEFAULT PRIVILEGES FOR ROLE ${POSTGRES_USER} IN SCHEMA staging GRANT SELECT ON TABLES TO ${GRAFANA_DB_USER};
+EOSQL

@@ -1,0 +1,16 @@
+# Installed on top of apache/airflow:slim-2.10.4-python3.12 (see Dockerfile.airflow).
+# apache-airflow is pinned so pip never up/downgrades Airflow itself.
+apache-airflow==2.10.4
+psycopg2-binary==2.9.10
+pandas==2.2.3
+numpy==2.1.3
+duckdb==1.1.3
+sqlalchemy>=1.4.49,<2.0
+requests>=2.31
+fastapi==0.115.6
+uvicorn==0.32.1
+python-multipart==0.0.20
+watchdog==6.0.0
+openpyxl==3.1.5
+reportlab==4.2.5
+pytest==8.3.4

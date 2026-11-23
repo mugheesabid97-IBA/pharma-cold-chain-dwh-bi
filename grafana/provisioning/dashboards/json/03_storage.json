@@ -1,0 +1,374 @@
+{
+  "uid": "sdi-storage",
+  "title": "03 Storage & Staging",
+  "description": "Row counts and sizes per layer, DB size, date coverage",
+  "editable": false,
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "tags": [
+    "sdi",
+    "phase1",
+    "monitoring"
+  ],
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "timepicker": {
+    "refresh_intervals": [
+      "10s",
+      "15s",
+      "30s",
+      "1m"
+    ]
+  },
+  "timezone": "browser",
+  "panels": [
+    {
+      "id": 1,
+      "type": "piechart",
+      "title": "Staging rows per source domain (latest)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT domain, row_count FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND layer = 'staging' ORDER BY 2 DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "pieType": "donut",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": true
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        },
+        "displayLabels": [
+          "percent"
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Postgres DB size",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 8,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT size_mb FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND layer = 'database'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "DuckDB mart file size",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 4,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT size_mb FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND layer = 'file'"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "unit": "decmbytes"
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto",
+        "justifyMode": "center"
+      }
+    },
+    {
+      "id": 4,
+      "type": "barchart",
+      "title": "Rows per layer (latest)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT engine || ' ' || layer AS layer, sum(row_count) AS rows FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND row_count IS NOT NULL GROUP BY 1 ORDER BY 2 DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "stacking": "none",
+        "showValue": "auto",
+        "barWidth": 0.8,
+        "groupWidth": 0.7,
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        },
+        "xTickLabelRotation": 0,
+        "xTickLabelMaxLength": 40,
+        "xField": "layer"
+      }
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Table row counts (latest snapshot)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT engine, layer, coalesce(domain, '') AS domain, object_name, row_count, round(size_mb, 2) AS size_mb FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) ORDER BY engine DESC, layer, object_name"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Date coverage per source (latest)",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 12,
+        "y": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "table",
+          "rawSql": "SELECT DISTINCT ON (source) source, min_date, max_date, distinct_year_months, covers_2023_2025, refresh_months, captured_at FROM monitoring.date_coverage ORDER BY source, captured_at DESC, id DESC"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Fact / staging row growth across loads",
+      "description": "",
+      "datasource": {
+        "uid": "pg-monitoring"
+      },
+      "gridPos": {
+        "h": 6,
+        "w": 12,
+        "x": 0,
+        "y": 21
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "uid": "pg-monitoring"
+          },
+          "editorMode": "code",
+          "rawQuery": true,
+          "format": "time_series",
+          "rawSql": "SELECT captured_at AS time, object_name AS metric, row_count AS value FROM monitoring.storage_metrics WHERE stage = 'final' AND layer IN ('fact', 'staging') AND $__timeFilter(captured_at) ORDER BY 1"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "line",
+            "lineInterpolation": "stepAfter",
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "annotations": {
+    "list": []
+  },
+  "links": [
+    {
+      "title": "Other dashboards",
+      "type": "dashboards",
+      "tags": [
+        "sdi"
+      ],
+      "asDropdown": true
+    }
+  ]
+}
