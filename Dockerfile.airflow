@@ -1,11 +1,15 @@
 # One image for airflow, ingest-api and file-watcher (saves disk + download time).
 FROM apache/airflow:slim-2.10.4-python3.12
 
+# Optional local wheelhouse (docker/wheels/*.whl) for slow networks; falls back to PyPI if empty.
 COPY requirements.txt /tmp/requirements.txt
-RUN pip install --no-cache-dir -r /tmp/requirements.txt
+COPY docker/wheels/ /tmp/wheels/
+RUN pip install --no-cache-dir --no-index --find-links /tmp/wheels -r /tmp/requirements.txt \
+    || pip install --no-cache-dir --find-links /tmp/wheels -r /tmp/requirements.txt
 
-# Pre-install DuckDB's postgres extension so the transform does not need internet at run time
-RUN python -c "import duckdb; c = duckdb.connect(); c.execute('INSTALL postgres'); print('duckdb postgres extension installed')"
+# Pre-install DuckDB's postgres extension (the transform falls back to psycopg2 if it is missing)
+RUN python -c "import duckdb; duckdb.connect().execute('INSTALL postgres'); print('duckdb postgres extension installed')" \
+    || echo "postgres extension not installed - psycopg2 fallback will be used"
 
 ENV PYTHONPATH=/opt/project \
     PROJECT_ROOT=/opt/project

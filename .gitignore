@@ -14,3 +14,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .venv/
+
+# local wheel cache for slow networks
+docker/wheels/*.whl
+docker/wheels/*.whl.*
