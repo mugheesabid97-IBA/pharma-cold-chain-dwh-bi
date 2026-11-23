@@ -43,14 +43,19 @@ def fetch() -> tuple[list, list]:
                               run_seconds
                        FROM monitoring.generation_log ORDER BY refresh_no, source, created_at DESC""")
         gen = cur.fetchall()
-        cur.execute("""SELECT b.file_name, b.rows_read, b.rows_loaded, b.rows_rejected
-                       FROM monitoring.batch_ingestion_log b WHERE b.file_name LIKE '%%refresh%%' ORDER BY b.id""")
-        ing = cur.fetchall()
-    return gen, ing
+        cur.execute("""SELECT DISTINCT ON (file_name) file_name, rows_read, rows_loaded, rows_rejected
+                       FROM monitoring.batch_ingestion_log WHERE file_name LIKE '%%refresh%%'
+                       ORDER BY file_name, id""")          # first ingestion of each refresh file
+        ing = sorted(cur.fetchall(), key=lambda r: (r[0].split("__")[1], r[0]))
+        cur.execute("""SELECT count(*), coalesce(sum(rows_read), 0), coalesce(sum(rows_loaded), 0)
+                       FROM (SELECT *, row_number() OVER (PARTITION BY file_name ORDER BY id) rn
+                             FROM monitoring.batch_ingestion_log WHERE file_name LIKE '%%refresh%%') x WHERE rn > 1""")
+        rerun = cur.fetchone()
+    return gen, ing, rerun
 
 
 def main() -> None:
-    gen, ing = fetch()
+    gen, ing, rerun = fetch()
     story = [Paragraph("Data Oversampling Report: Phase 1 (SDI)", H1),
              Paragraph("Pharma Cold Chain DWH + BI. Generator: <font face='Courier'>src/generator/oversampler.py</font>, "
                        "orchestrated by the Airflow DAG <font face='Courier'>data_generator_dag</font> "
@@ -95,17 +100,24 @@ def main() -> None:
                        "date). This volume is large enough to show growth in every dashboard, but small enough that a "
                        "refresh runs in minutes on an 8 GB laptop.", P),
              Paragraph("3. Statistics per refresh (from monitoring.generation_log)", H2)]
-    rows = [["Refresh", "Period", "Source", "File", "Rows (incl. bad)", "Bad rows", "Bad-row types", "Date range", "MB", "Gen. s"]]
+    rows = [["#", "Period", "Source", "File (timestamp omitted)", "Rows incl. bad", "Bad rows", "Bad-row types",
+             "Date range", "MB", "Gen. s"]]
     for r in gen:
-        br = ", ".join(f"{k}={v}" for k, v in (r[6] or {}).items())
-        rows.append([r[0], r[1], r[2], r[3], f"{r[4]:,}", r[5], br, f"{r[7]} .. {r[8]}", r[9], r[10]])
-    story.append(table(rows, [1.2, 1.3, 1.6, 4.4, 1.5, 1.1, 3.6, 2.6, 0.9, 0.9]) if gen else Paragraph("No generation runs logged yet.", P))
+        br = ", ".join(f"{k}={v}" for k, v in sorted((r[6] or {}).items()))
+        rows.append([r[0], r[1], r[2], r[3].rsplit("_", 1)[0] + ".csv", f"{r[4]:,}", r[5], br,
+                     f"{r[7]} to {r[8]}", f"{float(r[9]):.2f}", f"{float(r[10]):.0f}"])
+    story.append(table(rows, [0.6, 1.7, 1.5, 4.0, 1.3, 1.0, 3.5, 2.2, 1.0, 1.1]) if gen else Paragraph("No generation runs logged yet.", P))
     if ing:
         story += [Spacer(1, 6), Paragraph("4. Validation outcome when the refresh files were ingested", H2),
                   table([["File", "Rows read", "Loaded", "Rejected"]] + [[a, f"{b:,}", f"{c:,}", d] for a, b, c, d in ing],
                         [10, 2.5, 2.5, 2.5]),
                   Paragraph("Rejected = injected bad rows: every deliberately bad row was caught, and no valid row was "
-                            "lost. Stream-file bad rows are counted as malformed events on the Streaming dashboard.", P)]
+                            "lost. Stream-file bad rows (30 per refresh) were rejected the same way and show as malformed "
+                            "events on the Streaming dashboard.", P)]
+        if rerun and rerun[0]:
+            story.append(Paragraph(f"<b>Idempotency check:</b> {rerun[0]} already-processed refresh file(s) were dropped into "
+                                   f"landing again: {rerun[1]:,} rows read, <b>{rerun[2]:,} loaded</b>, so every row was "
+                                   "rejected as 'duplicate PK already in staging' (or for its original bad-row reason).", P))
     out = DOCS_DIR / "Oversampling_Report.pdf"
     SimpleDocTemplate(str(out), pagesize=A4, leftMargin=1.4 * cm, rightMargin=1.4 * cm, topMargin=1.2 * cm,
                       bottomMargin=1.2 * cm, title="Oversampling Report - Phase 1").build(story)

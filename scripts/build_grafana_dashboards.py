@@ -11,7 +11,8 @@ from typing import Any
 
 OUT = Path(__file__).resolve().parents[1] / "grafana" / "provisioning" / "dashboards" / "json"
 DS = {"uid": "pg-monitoring"}
-LATEST_RUN = "(SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1)"
+# newest snapshot only (one record_storage_metrics call = one captured_at)
+LATEST = "captured_at = (SELECT max(captured_at) FROM monitoring.storage_metrics)"
 
 
 class Board:
@@ -137,22 +138,22 @@ def stream_board() -> Board:
 def storage_board() -> Board:
     b = Board("sdi-storage", "03 Storage & Staging", "Row counts and sizes per layer, DB size, date coverage")
     b.add("piechart", "Staging rows per source domain (latest)",
-          f"SELECT domain, row_count FROM monitoring.storage_metrics WHERE run_id = {LATEST_RUN} "
+          f"SELECT domain, row_count FROM monitoring.storage_metrics WHERE {LATEST} "
           "AND layer = 'staging' ORDER BY 2 DESC", w=8, h=9,
           options={"pieType": "donut", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": True},
                    "legend": {"displayMode": "table", "placement": "right", "values": ["value", "percent"]},
                    "displayLabels": ["percent"]})
-    b.add("stat", "Postgres DB size", f"SELECT size_mb FROM monitoring.storage_metrics WHERE run_id = {LATEST_RUN} "
+    b.add("stat", "Postgres DB size", f"SELECT size_mb FROM monitoring.storage_metrics WHERE {LATEST} "
           "AND layer = 'database'", w=4, h=9, unit="decmbytes", options=stat_opts())
-    b.add("stat", "DuckDB mart file size", f"SELECT size_mb FROM monitoring.storage_metrics WHERE run_id = {LATEST_RUN} "
+    b.add("stat", "DuckDB mart file size", f"SELECT size_mb FROM monitoring.storage_metrics WHERE {LATEST} "
           "AND layer = 'file'", w=4, h=9, unit="decmbytes", options=stat_opts())
     b.add("barchart", "Rows per layer (latest)",
           f"SELECT engine || ' ' || layer AS layer, sum(row_count) AS rows FROM monitoring.storage_metrics "
-          f"WHERE run_id = {LATEST_RUN} AND row_count IS NOT NULL GROUP BY 1 ORDER BY 2 DESC", w=8, h=9,
+          f"WHERE {LATEST} AND row_count IS NOT NULL GROUP BY 1 ORDER BY 2 DESC", w=8, h=9,
           options=bar_opts("horizontal", x_field="layer"))
     b.add("table", "Table row counts (latest snapshot)",
           f"SELECT engine, layer, coalesce(domain, '') AS domain, object_name, row_count, round(size_mb, 2) AS size_mb "
-          f"FROM monitoring.storage_metrics WHERE run_id = {LATEST_RUN} ORDER BY engine DESC, layer, object_name",
+          f"FROM monitoring.storage_metrics WHERE {LATEST} ORDER BY engine DESC, layer, object_name",
           w=12, h=12)
     b.add("table", "Date coverage per source (latest)",
           "SELECT DISTINCT ON (source) source, min_date, max_date, distinct_year_months, covers_2023_2025, "

@@ -48,7 +48,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "SELECT domain, row_count FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND layer = 'staging' ORDER BY 2 DESC"
+          "rawSql": "SELECT domain, row_count FROM monitoring.storage_metrics WHERE captured_at = (SELECT max(captured_at) FROM monitoring.storage_metrics) AND layer = 'staging' ORDER BY 2 DESC"
         }
       ],
       "fieldConfig": {
@@ -104,7 +104,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "SELECT size_mb FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND layer = 'database'"
+          "rawSql": "SELECT size_mb FROM monitoring.storage_metrics WHERE captured_at = (SELECT max(captured_at) FROM monitoring.storage_metrics) AND layer = 'database'"
         }
       ],
       "fieldConfig": {
@@ -153,7 +153,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "SELECT size_mb FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND layer = 'file'"
+          "rawSql": "SELECT size_mb FROM monitoring.storage_metrics WHERE captured_at = (SELECT max(captured_at) FROM monitoring.storage_metrics) AND layer = 'file'"
         }
       ],
       "fieldConfig": {
@@ -202,7 +202,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "SELECT engine || ' ' || layer AS layer, sum(row_count) AS rows FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) AND row_count IS NOT NULL GROUP BY 1 ORDER BY 2 DESC"
+          "rawSql": "SELECT engine || ' ' || layer AS layer, sum(row_count) AS rows FROM monitoring.storage_metrics WHERE captured_at = (SELECT max(captured_at) FROM monitoring.storage_metrics) AND row_count IS NOT NULL GROUP BY 1 ORDER BY 2 DESC"
         }
       ],
       "fieldConfig": {
@@ -255,7 +255,7 @@
           "editorMode": "code",
           "rawQuery": true,
           "format": "table",
-          "rawSql": "SELECT engine, layer, coalesce(domain, '') AS domain, object_name, row_count, round(size_mb, 2) AS size_mb FROM monitoring.storage_metrics WHERE run_id = (SELECT run_id FROM monitoring.storage_metrics ORDER BY captured_at DESC, id DESC LIMIT 1) ORDER BY engine DESC, layer, object_name"
+          "rawSql": "SELECT engine, layer, coalesce(domain, '') AS domain, object_name, row_count, round(size_mb, 2) AS size_mb FROM monitoring.storage_metrics WHERE captured_at = (SELECT max(captured_at) FROM monitoring.storage_metrics) ORDER BY engine DESC, layer, object_name"
         }
       ],
       "fieldConfig": {
